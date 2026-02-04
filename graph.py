@@ -8,6 +8,7 @@ from dash import dcc, html, Input, Output, State
 from plotly.subplots import make_subplots
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score, precision_score, confusion_matrix, classification_report
 
 # ================= DATA =================
@@ -702,10 +703,13 @@ def logistic_regression_evaluation(df, features, target, threshold=0.5):
     y = df[target]
 
     # Split the data into training and testing sets
+    scaler = StandardScaler()
+    x = scaler.fit_transform(x)
     X_train, X_test, Y_train, Y_test = train_test_split(x, y, random_state=66, test_size=0.3)
 
     # Train Logistic Regression model
-    log_reg = LogisticRegression()
+    # old - log_reg = LogisticRegression()
+    log_reg = LogisticRegression(max_iter=100, solver='liblinear', random_state=42)
     log_reg.fit(X_train, Y_train)
 
     # Make predictions on the training set
@@ -748,7 +752,15 @@ def logistic_regression_evaluation(df, features, target, threshold=0.5):
     ])
 
     # Perform cross-validation
-    CVscore = cross_val_score(LogisticRegression(), x, y, cv=3, scoring='precision')
+    # old - CVscore = cross_val_score(LogisticRegression(), x, y, cv=10, scoring='precision')
+    CVscore = cross_val_score(
+    LogisticRegression(max_iter=200, solver='liblinear'),
+    x, y,
+    cv=3,              # was 10
+    scoring='precision',
+    n_jobs=1           # IMPORTANT: prevent parallel memory spikes
+    )
+
 
     # Classification report
     class_report = classification_report(Y_test, y_test_pred, output_dict=True)
