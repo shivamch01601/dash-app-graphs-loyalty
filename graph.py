@@ -1,4 +1,4 @@
-﻿# ================= LIBRARIES =================
+# ================= LIBRARIES =================
 import dash
 import pandas as pd
 import numpy as np
@@ -24,35 +24,226 @@ table_style = {
     'borderCollapse': 'collapse',
     'margin': '10px auto',
     'textAlign': 'center',
-    'fontFamily': 'Arial',
+    'fontFamily': 'Book Antiqua',
     'fontSize': '14px',
     'width': '50%'
 }
 
+# ================= BRAND COLORS =================
+
+BRAND_COLORS = {
+    "nexus_blue": "#112B46",
+    "e1_red": "#E41A37",
+    "accent_blue": "#5A8FBE",
+    "green": "#6C8C3E",
+    "teal": "#2E8587",
+    "gold": "#B3870B",
+    "text_gray": "#404040",
+    "light_gray": "#E5E6E7",
+    "mid_gray": "#95999D",
+    "white": "#FFFFFF",
+
+    # ---- Added for UI consistency ----
+    "primary": "#112B46"   # maps to nexus_blue
+}
+
+
+CHART_COLOR_SEQUENCE = [
+    BRAND_COLORS["accent_blue"],
+    BRAND_COLORS["green"],
+    BRAND_COLORS["teal"],
+    BRAND_COLORS["gold"],
+    BRAND_COLORS["e1_red"]
+]
+
+PAGE_TITLE_STYLE = {
+    "color": BRAND_COLORS["nexus_blue"],
+    "fontSize": "28px",
+    "fontWeight": "600",
+    "marginBottom": "25px",
+    "textAlign": "left"
+}
+
+CONTROL_CONTAINER_STYLE = {
+    "backgroundColor": BRAND_COLORS["light_gray"],
+    "padding": "20px",
+    "borderRadius": "8px",
+    "marginBottom": "30px"
+}
+
+GRAPH_MARGIN = dict(l=70, r=30, t=60, b=70)
+
+AXIS_STYLE = dict(
+    title_font=dict(
+        family="Arial, sans-serif",
+        size=15,
+        color=BRAND_COLORS["nexus_blue"]
+    ),
+    tickfont=dict(
+        family="Arial, sans-serif",
+        size=12,
+        color=BRAND_COLORS["mid_gray"]
+    )
+)
+
+
 # ================= APP =================
-app = dash.Dash(__name__, suppress_callback_exceptions=True)
+
+# add css and js files 
+external_stylesheets = ["https://econone.com/wp-content/themes/econone/assets/css/graphs-external.css"]
+external_scripts = ["https://econone.com/wp-content/themes/econone/assets/js/graphs-external.js"]
+
+# app = dash.Dash(__name__, suppress_callback_exceptions=True)
+app = dash.Dash(__name__, suppress_callback_exceptions=True, external_stylesheets=external_stylesheets, external_scripts=external_scripts)
+
 server = app.server
 
-app.layout = html.Div([
-    dcc.Location(id='url'),
-    html.Div(id='page-content', style={'width': '90%', 'margin': '0 auto', 'textAlign': 'center'})
-])
+import plotly.io as pio
 
-# ================= HOME PAGE =================
+pio.templates["econone"] = go.layout.Template(
+    layout=go.Layout(
+        font=dict(
+            family="Arial",
+            size=14,
+            color=BRAND_COLORS["text_gray"]
+        ),
+
+        title=dict(
+            font=dict(
+                size=20,
+                color=BRAND_COLORS["nexus_blue"]
+            ),
+            x=0.5
+        ),
+
+        plot_bgcolor=BRAND_COLORS["white"],
+        paper_bgcolor=BRAND_COLORS["white"],
+
+        colorway=CHART_COLOR_SEQUENCE,
+
+	xaxis=dict(
+    	showgrid=True,
+    	gridcolor=BRAND_COLORS["light_gray"],
+    	linecolor=BRAND_COLORS["mid_gray"],
+    	tickfont=dict(
+        	family="Book Antiqua, serif",
+        	size=12,
+        	color=BRAND_COLORS["mid_gray"]
+    	),
+    	title_font=dict(
+        	family="Book Antiqua, serif",
+        	size=15,
+        	color=BRAND_COLORS["nexus_blue"]
+   	 )
+	),
+
+	yaxis=dict(
+    	showgrid=True,
+    	gridcolor=BRAND_COLORS["light_gray"],
+    	linecolor=BRAND_COLORS["mid_gray"],
+    	tickfont=dict(
+        	family="Book Antiqua, serif",
+        	size=12,
+        	color=BRAND_COLORS["mid_gray"]
+    	),
+    	title_font=dict(
+        	family="Book Antiqua, serif",
+        	size=15,
+        	color=BRAND_COLORS["nexus_blue"]
+    	)
+	),
+
+
+        legend=dict(
+            font=dict(size=12),
+            bgcolor="rgba(0,0,0,0)"
+        ),
+
+        hoverlabel=dict(
+            bgcolor=BRAND_COLORS["nexus_blue"],
+            font_size=12,
+            font_family="Arial"
+        )
+    )
+)
+
+pio.templates.default = "econone"
+
+# GLOBAL IFRAME RESIZE SCRIPT (runs on all pages)
+app.index_string = """
+<!DOCTYPE html>
+<html>
+    <head>
+        {%metas%}
+        <title>{%title%}</title>
+        {%favicon%}
+        {%css%}
+	<style>
+        	/* FIX: Restore Plotly axis ticks */
+        	.js-plotly-plot .xtick text,
+        	.js-plotly-plot .ytick text {
+        	    display: block !important;
+        	    fill: #404040 !important;
+        	    font-size: 12px !important;
+       	 }
+    	</style>
+    </head>
+    <body>
+        {%app_entry%}
+        <footer>
+            {%config%}
+            {%scripts%}
+            {%renderer%}
+            <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                var last = 0;
+                setInterval(function () {
+                    var height = document.documentElement.scrollHeight;
+                    if (height !== last) {
+                        last = height;
+                        parent.postMessage({ type: "iframeHeight", height: height },"*");
+                    }
+                }, 200);
+            });
+            </script>
+        </footer>
+    </body>
+</html>
+"""
+
+# ============== APP LAYOUT ===================
+
+app.layout = html.Div(
+    style={
+        "backgroundColor": BRAND_COLORS["light_gray"],
+        "minHeight": "100vh",
+        "padding": "40px 0"
+    },
+    children=[
+        dcc.Location(id='url'),
+        html.Div(
+            id='page-content',
+            style={
+                "maxWidth": "1200px",
+                "margin": "0 auto",
+                "backgroundColor": BRAND_COLORS["white"],
+                "padding": "40px",
+                "borderRadius": "8px",
+                "boxShadow": "0 4px 20px rgba(0,0,0,0.08)"
+            }
+        )
+    ]
+)
+
+
 # ================= HOME PAGE =================
 def home_page():
     return html.Div([
         # Main Heading
-        html.H1(
-            "Welcome to our Interactive Dashboard for Airline Loyalty Program Data!",
-            style={
-                'color': '#0d47a1', 
-                'textAlign': 'center', 
-                'fontSize': '32px', 
-                'fontWeight': 'bold',
-                'marginBottom': '20px'
-            }
-        ),
+	html.H1(
+  	  "Welcome to our Interactive Dashboard for Airline Loyalty Program Data!",
+ 	   style={**PAGE_TITLE_STYLE, 'textAlign': 'center'}
+	),
         
         # Subheading / Description
         html.P(
@@ -74,7 +265,7 @@ def home_page():
         html.P(
             "Please click on the section below that you want to explore:",
             style={
-                'color': '#f57c00', 
+                'color': BRAND_COLORS["e1_red"], 
                 'textAlign': 'center', 
                 'fontSize': '20px', 
                 'fontWeight': 'bold',
@@ -100,18 +291,17 @@ def home_page():
 # ================= PAGE LAYOUTS =================
 def graph1_page():
     return html.Div(
-        style={'textAlign': 'center', 'width': '80%', 'margin': 'auto'},
+        style={'margin-bottom': '20px'},
         children=[
-            # Layout for graph 1
             html.Div([
                 html.Div([
                     html.H3("", style={'color': 'blue'}),
                     html.P("", style={'color': 'red', 'font-weight': 'bold'}),
                 ], style={'color': 'blue', 'font-weight': 'bold'}),
                 
-                html.H1("Historical Earn and Burn Over Time"),
+                html.H1("Historical Earn and Burn Over Time", style=PAGE_TITLE_STYLE),
                 
-                # Text description for Graph 1
+                # Text description
                 html.Div([
                     html.P(
                         "This graph shows the historical earn and burn over time. "
@@ -119,175 +309,260 @@ def graph1_page():
                     )
                 ], style={'margin-bottom': '20px'}),
                 
+                # Slider in its own div
                 html.Div([
-                    html.H3("Select Year Range"),
-                    dcc.RangeSlider(
-                        id='year_range_slider_main',
-                        min=1997,
-                        max=2022,
-                        value=[1997, 2022],
-                        marks={year: str(year) for year in range(1997, 2023)},
-                        step=1
-                    )
-                ], style={'margin-bottom': '20px'}),
+                    html.Div([
+                        html.H3("Select Year Range"),
+                        dcc.RangeSlider(
+                            id='year_range_slider_main',
+                            min=1997,
+                            max=2022,
+                            value=[1997, 2022],
+                            marks={year: str(year) for year in range(1997, 2023)},
+                            step=1,
+                            tooltip={"placement": "bottom", "always_visible": False}
+                        )
+                    ], style=CONTROL_CONTAINER_STYLE)
+                ], style={"margin-bottom": "20px"}),  # extra spacing if needed
                 
-                # Graph with description text at the top
-                dcc.Graph(
-                    id='graph1-main',
-                    style={'width': '100%', 'float': 'left'}
-                ),
+                # Graph in its own div
+                html.Div([
+                    dcc.Graph(
+                        id='graph1-main',
+                        style={'width': '100%'}
+                    )
+                ], style={
+                    "backgroundColor": BRAND_COLORS["white"],
+                    "padding": "20px",
+                    "borderRadius": "8px",
+                    "boxShadow": "0 4px 10px rgba(0,0,0,0.05)",
+                    "marginTop": "20px"
+                }),
+
             ])
         ]
     )
 
-
 def earn_page():
     return html.Div([
-        html.H1("Historical Earn with Different Channels"),
 
-        # Text description for Graph 2
+        html.H1(
+            "Historical Earn with Different Channels",
+            style=PAGE_TITLE_STYLE
+        ),
+
         html.Div([
             html.P(
                 "This graph shows the historical earn with different channels over time. "
                 "You can adjust the year range and select channels using the sliders and dropdowns below."
             )
-        ], style={'margin-bottom': '20px'}),
+        ], style={'marginBottom': '20px'}),
 
-        html.H3("Select Year Range"),
-        dcc.RangeSlider(
-            id='year_range_slider_earn',
-            min=1997,
-            max=2022,
-            value=[1997, 2022],
-            marks={year: str(year) for year in range(1997, 2023)},
-            step=1
-        ),
-        html.H3("Select Channels to Display"),
-        dcc.Dropdown(
-            id='channel_selection_earn',
-            options=[
-                {'label': 'Miles Earned by Flight Activity (fl)', 'value': 'fl_earn'},
-                {'label': 'Miles Earned through Credit Card (cc)', 'value': 'cc_earn'},
-                {'label': 'Miles Earned through Other Channels (ot)', 'value': 'ot_earn'}
-            ],
-            multi=True,
-            value=['fl_earn', 'cc_earn', 'ot_earn']
-        ),
-        dcc.Graph(id='graph_earn_1')
-    ], style={'margin-bottom': '20px'})
+        # ---- CONTROL SECTION ----
+        html.Div([
+            html.Div([
+                html.H3("Select Year Range"),
+                dcc.RangeSlider(
+                    id='year_range_slider_earn',
+                    min=1997,
+                    max=2022,
+                    value=[1997, 2022],
+                    marks={year: str(year) for year in range(1997, 2023)},
+                    step=1,
+                    tooltip={"placement": "bottom", "always_visible": False}
+                ),
+                html.Br(),
+                html.H3("Select Channels to Display"),
+                dcc.Dropdown(
+                    id='channel_selection_earn',
+                    options=[
+                        {'label': 'Miles Earned by Flight Activity (fl)', 'value': 'fl_earn'},
+                        {'label': 'Miles Earned through Credit Card (cc)', 'value': 'cc_earn'},
+                        {'label': 'Miles Earned through Other Channels (ot)', 'value': 'ot_earn'}
+                    ],
+                    multi=True,
+                    value=['fl_earn', 'cc_earn', 'ot_earn']
+                )
+            ], style=CONTROL_CONTAINER_STYLE)
+        ], style={"margin-bottom": "20px"}),
+
+        # ---- GRAPH SECTION ----
+        html.Div([
+            dcc.Graph(id='graph_earn_1')
+        ], style={
+            "backgroundColor": BRAND_COLORS["white"],
+            "padding": "20px",
+            "borderRadius": "8px",
+        })
+
+    ], style={'marginBottom': '20px'})
+
 
 def burn_page():
     return html.Div([
-        html.H1("Historical Burn with Different Channels"),
 
-        # Text description for Graph 2 - Burn
+        html.H1(
+            "Historical Burn with Different Channels",
+            style=PAGE_TITLE_STYLE
+        ),
+
         html.Div([
             html.P(
                 "This graph shows the historical burn with different channels over time. "
                 "You can adjust the year range and select channels using the sliders and dropdowns below."
             )
-        ], style={'margin-bottom': '20px'}),
+        ], style={'marginBottom': '20px'}),
 
-        html.H3("Select Year Range"),
-        dcc.RangeSlider(
-            id='year_range_slider_burn',
-            min=1997,
-            max=2022,
-            value=[1997, 2022],
-            marks={year: str(year) for year in range(1997, 2023)},
-            step=1
-        ),
-        html.H3("Select Channels to Display"),
-        dcc.Dropdown(
-            id='channel_selection_burn',
-            options=[
-                {'label': 'Miles Burned by Flight Activity (fl)', 'value': 'fl_burn'},
-                {'label': 'Miles Burned through Credit Card (cc)', 'value': 'cc_burn'},
-                {'label': 'Miles Burned through Other Channels (ot)', 'value': 'ot_burn'}
-            ],
-            multi=True,
-            value=['fl_burn', 'cc_burn', 'ot_burn']
-        ),
-        dcc.Graph(id='graph_burn_1')
-    ], style={'margin-bottom': '20px'})
-    
+        # ---- CONTROL SECTION ----
+        html.Div([
+            html.Div([
+                html.H3("Select Year Range"),
+                dcc.RangeSlider(
+                    id='year_range_slider_burn',
+                    min=1997,
+                    max=2022,
+                    value=[1997, 2022],
+                    marks={year: str(year) for year in range(1997, 2023)},
+                    step=1,
+                    tooltip={"placement": "bottom", "always_visible": False}
+                ),
+                html.Br(),
+                html.H3("Select Channels to Display"),
+                dcc.Dropdown(
+                    id='channel_selection_burn',
+                    options=[
+                        {'label': 'Miles Burned by Flight Activity (fl)', 'value': 'fl_burn'},
+                        {'label': 'Miles Burned through Credit Card (cc)', 'value': 'cc_burn'},
+                        {'label': 'Miles Burned through Other Channels (ot)', 'value': 'ot_burn'}
+                    ],
+                    multi=True,
+                    value=['fl_burn', 'cc_burn', 'ot_burn']
+                )
+            ], style=CONTROL_CONTAINER_STYLE)
+        ], style={"margin-bottom": "20px"}),
+
+        # ---- GRAPH SECTION ----
+        html.Div([
+            dcc.Graph(id='graph_burn_1')
+        ], style={
+            "backgroundColor": BRAND_COLORS["white"],
+            "padding": "20px",
+            "borderRadius": "8px",
+        })
+
+    ], style={'marginBottom': '20px'})
 
 
 def earn_monthly_page():
     return html.Div([
-        html.H1("Historical Earn with Different Channels - Monthly"),
 
-        # Text description for Graph 3-a
+        html.H1(
+            "Historical Earn with Different Channels - Monthly",
+            style=PAGE_TITLE_STYLE
+        ),
+
         html.Div([
             html.P(
                 "This graph shows the historical earn with different channels on a monthly basis. "
                 "You can adjust the year range and select channels using the sliders and dropdowns below."
             )
-        ], style={'margin-bottom': '20px'}),
+        ], style={'marginBottom': '20px'}),
 
-        html.H3("Select Year Range"),
-        dcc.RangeSlider(
-            id='year_range_slider_earn_monthly',
-            min=1997,
-            max=2022,
-            value=[1997, 2022],
-            marks={year: str(year) for year in range(1997, 2023)},
-            step=1
-        ),
-        html.H3("Select Channels to Display"),
-        dcc.Dropdown(
-            id='channel_selection_earn_monthly',
-            options=[
-                {'label': 'Miles Earned by Flight Activity (fl)', 'value': 'fl_earn'},
-                {'label': 'Miles Earned through Credit Card (cc)', 'value': 'cc_earn'},
-                {'label': 'Miles Earned through Other Channels (ot)', 'value': 'ot_earn'}
-            ],
-            multi=True,
-            value=['fl_earn', 'cc_earn', 'ot_earn']
-        ),
-        dcc.Graph(id='graph_earn_monthly')
-    ], style={'margin-bottom': '20px'})
+        html.Div([
+            html.Div([
+                html.H3("Select Year Range"),
+                dcc.RangeSlider(
+                    id='year_range_slider_earn_monthly',
+                    min=1997,
+                    max=2022,
+                    value=[1997, 2022],
+                    marks={year: str(year) for year in range(1997, 2023)},
+                    step=1,
+                    tooltip={"placement": "bottom", "always_visible": False}
+                ),
+                html.Br(),
+                html.H3("Select Channels to Display"),
+                dcc.Dropdown(
+                    id='channel_selection_earn_monthly',
+                    options=[
+                        {'label': 'Miles Earned by Flight Activity (fl)', 'value': 'fl_earn'},
+                        {'label': 'Miles Earned through Credit Card (cc)', 'value': 'cc_earn'},
+                        {'label': 'Miles Earned through Other Channels (ot)', 'value': 'ot_earn'}
+                    ],
+                    multi=True,
+                    value=['fl_earn', 'cc_earn', 'ot_earn']
+                )
+            ], style=CONTROL_CONTAINER_STYLE)
+        ], style={"margin-bottom": "20px"}),
+
+        html.Div([
+            dcc.Graph(id='graph_earn_monthly')
+        ], style={
+            "backgroundColor": BRAND_COLORS["white"],
+            "padding": "20px",
+            "borderRadius": "8px",
+        })
+
+    ], style={'marginBottom': '20px'})
+
 
 def burn_monthly_page():
     return html.Div([
-        html.H1("Historical Burn with Different Channels - Monthly"),
 
-        # Text description for Graph 3-b
+        html.H1(
+            "Historical Burn with Different Channels - Monthly",
+            style=PAGE_TITLE_STYLE
+        ),
+
         html.Div([
             html.P(
                 "This graph shows the historical burn with different channels on a monthly basis. "
                 "You can adjust the year range and select channels using the sliders and dropdowns below."
             )
-        ], style={'margin-bottom': '20px'}),
+        ], style={'marginBottom': '20px'}),
 
-        html.H3("Select Year Range"),
-        dcc.RangeSlider(
-            id='year_range_slider_burn_monthly',
-            min=1997,
-            max=2022,
-            value=[1997, 2022],
-            marks={year: str(year) for year in range(1997, 2023)},
-            step=1
-        ),
-        html.H3("Select Channels to Display"),
-        dcc.Dropdown(
-            id='channel_selection_burn_monthly',
-            options=[
-                {'label': 'Miles Burned by Flight Activity (fl)', 'value': 'fl_burn'},
-                {'label': 'Miles Burned through Credit Card (cc)', 'value': 'cc_burn'},
-                {'label': 'Miles Burned through Other Channels (ot)', 'value': 'ot_burn'}
-            ],
-            multi=True,
-            value=['fl_burn', 'cc_burn', 'ot_burn']
-        ),
-        dcc.Graph(id='graph_burn_monthly')
-    ], style={'margin-bottom': '20px'})
+        html.Div([
+            html.Div([
+                html.H3("Select Year Range"),
+                dcc.RangeSlider(
+                    id='year_range_slider_burn_monthly',
+                    min=1997,
+                    max=2022,
+                    value=[1997, 2022],
+                    marks={year: str(year) for year in range(1997, 2023)},
+                    step=1,
+                    tooltip={"placement": "bottom", "always_visible": False}
+                ),
+                html.Br(),
+                html.H3("Select Channels to Display"),
+                dcc.Dropdown(
+                    id='channel_selection_burn_monthly',
+                    options=[
+                        {'label': 'Miles Burned by Flight Activity (fl)', 'value': 'fl_burn'},
+                        {'label': 'Miles Burned through Credit Card (cc)', 'value': 'cc_burn'},
+                        {'label': 'Miles Burned through Other Channels (ot)', 'value': 'ot_burn'}
+                    ],
+                    multi=True,
+                    value=['fl_burn', 'cc_burn', 'ot_burn']
+                )
+            ], style=CONTROL_CONTAINER_STYLE)
+        ], style={"margin-bottom": "20px"}),
+
+        html.Div([
+            dcc.Graph(id='graph_burn_monthly')
+        ], style={
+            "backgroundColor": BRAND_COLORS["white"],
+            "padding": "20px",
+            "borderRadius": "8px",
+        })
+
+    ], style={'marginBottom': '20px'})
+
 
 def distribution_page():
     return html.Div([
-        html.H1("Historical Earn-Burn Distribution"),
+        html.H1("Historical Earn-Burn Distribution", style=PAGE_TITLE_STYLE),
 
-        # Text description for Graph 4 and 5
         html.Div([
             html.P(
                 "This graph shows the distribution of historical earn and burn. "
@@ -295,15 +570,22 @@ def distribution_page():
             )
         ], style={'margin-bottom': '20px'}),
 
-        dcc.Graph(id='earn-burn-histogram'),
+        html.Div([
+            dcc.Graph(id='earn-burn-histogram')
+        ], style={
+            "backgroundColor": BRAND_COLORS["white"],
+            "padding": "20px",
+            "borderRadius": "8px",
+        }),
+
         html.Button(id='dummy-input', style={'display': 'none'})  # Dummy input (hidden button)
     ])
 
+
 def age_rate_page():
     return html.Div([
-        html.H1("Historical Redemption Rate"),
+        html.H1("Historical Redemption Rate", style=PAGE_TITLE_STYLE),
 
-        # Text description for Graph 6
         html.Div([
             html.P(
                 "This graph shows the historical redemption rate by age range. "
@@ -311,77 +593,152 @@ def age_rate_page():
             )
         ], style={'margin-bottom': '20px'}),
 
-        dcc.Graph(id='graph_age_range_vs_r_rate_1')
+        html.Div([
+            dcc.Graph(id='graph_age_range_vs_r_rate_1')
+        ], style={
+            "backgroundColor": BRAND_COLORS["white"],
+            "padding": "20px",
+            "borderRadius": "8px",
+        })
     ], style={'margin-bottom': '20px'})
+
 
 def channel_rate_page():
     return html.Div([
-        html.H1("Historical Redemption Rate for Channels"),
 
-        # Text description for Graph 7
+        html.H1(
+            "Historical Redemption Rate for Channels",
+            style=PAGE_TITLE_STYLE
+        ),
+
         html.Div([
             html.P(
                 "This graph shows the historical redemption rate for different channels by age range. "
                 "You can select channels using the dropdown below."
             )
-        ], style={'margin-bottom': '20px'}),
+        ], style={'marginBottom': '20px'}),
 
-        html.H3("Select Channels to Display"),
-        dcc.Dropdown(
-            id='channel_selection_rate',
-            options=[
-                {'label': 'Flight Redemption Rate (fl)', 'value': 'fl_r_rate'},
-                {'label': 'Credi-Card Redemption Rate (cc)', 'value': 'cc_r_rate'},
-                {'label': 'Redemption Rate for Other Channels (ot)', 'value': 'ot_r_rate'},
-            ],
-            multi=True,
-            value=['fl_r_rate', 'cc_r_rate', 'ot_r_rate'],
-        ),
-        dcc.Graph(id='graph_age_range_vs_r_rate_channels')
-    ], style={'margin-bottom': '20px'})
+        html.Div([
+            html.Div([
+                html.H3("Select Channels to Display"),
+                dcc.Dropdown(
+                    id='channel_selection_rate',
+                    options=[
+                        {'label': 'Flight Redemption Rate (fl)', 'value': 'fl_r_rate'},
+                        {'label': 'Credit-Card Redemption Rate (cc)', 'value': 'cc_r_rate'},
+                        {'label': 'Redemption Rate for Other Channels (ot)', 'value': 'ot_r_rate'},
+                    ],
+                    multi=True,
+                    value=['fl_r_rate', 'cc_r_rate', 'ot_r_rate'],
+                )
+            ], style=CONTROL_CONTAINER_STYLE)
+        ], style={"margin-bottom": "20px"}),
+
+        html.Div([
+            dcc.Graph(id='graph_age_range_vs_r_rate_channels')
+        ], style={
+            "backgroundColor": BRAND_COLORS["white"],
+            "padding": "20px",
+            "borderRadius": "8px",
+        })
+
+    ], style={'marginBottom': '20px'})
+
 
 def model_page():
     return html.Div([
-        html.H1("Loyalty Program Modelling Exercise"),
+
+        html.H1(
+            "Loyalty Program Modelling Exercise",
+            style=PAGE_TITLE_STYLE
+        ),
+
         html.Div([
-            f"In this predictive model exercise, our objective is to predict the status of each airline user based on selected features. The target variable can be chosen from three options: whether the user is an active member of airline's loyalty program, whether he or she uses an airline co-branded credit card, or whether he or she is an active redeemer of miles earned through airline's loyalty program participation. A value of 1 signifies active status (0 for inactive), credit card usage (0 for non-credit card user), or redemption of miles (0 for non-redemption).",
-            html.P("This section allows you to evaluate a logistic regression model on the given dataset. Select features, target variable, and threshold. Click 'Run Evaluation' to view the results."),
+            html.P(
+                "In this predictive model exercise, our objective is to predict the status of each airline user "
+                "based on selected features. The target variable can be chosen from three options: whether the "
+                "user is an active member of airline's loyalty program, whether he or she uses an airline "
+                "co-branded credit card, or whether he or she is an active redeemer of miles."
+            ),
+            html.P(
+                "This section allows you to evaluate a logistic regression model. Select features, "
+                "target variable, and threshold. Click 'Run Evaluation' to view the results."
+            ),
         ], style={'marginBottom': '20px'}),
-        html.Label("Select Features", style={'fontWeight': 'bold'}),
-        dcc.Dropdown(
-            id='feature-selector',
-            options=[{'label': col, 'value': col} for col in df.columns],
-            multi=True,
-            value=df.columns[2:].tolist()
-        ),
-        html.Br(),
-        html.Label("Select Target Variable", style={'fontWeight': 'bold'}),
-        dcc.Dropdown(
-            id='target-variable',
-            options=[{'label': col, 'value': col} for col in df.columns[1:4]],
-            value=df.columns[1]
-        ),
-        html.Br(),
-        html.Label("Select Threshold (Probability Cutoff)", style={'fontWeight': 'bold'}),
-        html.P("The threshold determines the probability cutoff for classifying instances. Changing it alters how predictions are made based on probabilities."),
-        dcc.Slider(
-            id='threshold-slider',
-            min=0.1,
-            max=1.0,
-            step=0.1,
-            value=0.5,
-            marks={i / 10: str(i / 10) for i in range(1, 11)}
-        ),
-        html.Br(),
+
+        # ---- CONTROL SECTION ----
         html.Div([
-            "Once you click 'Run Evaluation', please wait for 5 to 10 seconds for model training."
-        ], style={'marginTop': '20px'}),
-        html.Br(),
-        html.Button('Run Evaluation', id='run-evaluation'),
-        html.Br(),
-        html.Hr(style={'border-top': '2px solid black', 'font-weight': 'bold'}),
-        html.Div(id='evaluation-output')
-    ])
+
+            html.Label("Select Features", style={'fontWeight': 'bold'}),
+            dcc.Dropdown(
+                id='feature-selector',
+                options=[{'label': col, 'value': col} for col in df.columns],
+                multi=True,
+                value=df.columns[2:].tolist()
+            ),
+
+            html.Br(),
+
+            html.Label("Select Target Variable", style={'fontWeight': 'bold'}),
+            dcc.Dropdown(
+                id='target-variable',
+                options=[{'label': col, 'value': col} for col in df.columns[1:4]],
+                value=df.columns[1]
+            ),
+
+            html.Br(),
+
+            html.Label("Select Threshold (Probability Cutoff)", style={'fontWeight': 'bold'}),
+            html.P(
+                "The threshold determines the probability cutoff for classifying instances."
+            ),
+
+            dcc.Slider(
+                id='threshold-slider',
+                min=0.1,
+                max=1.0,
+                step=0.1,
+                value=0.5,
+                marks={i / 10: str(i / 10) for i in range(1, 11)}, tooltip={"placement": "bottom", "always_visible": False}
+            ),
+
+            html.Br(),
+
+            html.Div(
+                "After clicking 'Run Evaluation', please wait 5–10 seconds for model training.",
+                style={'marginTop': '10px'}
+            ),
+
+            html.Br(),
+
+            html.Button(
+                'Run Evaluation',
+                id='run-evaluation',
+                style={
+                    "backgroundColor": BRAND_COLORS["primary"],
+                    "color": "white",
+                    "padding": "10px 20px",
+                    "border": "none",
+                    "borderRadius": "6px",
+                    "cursor": "pointer"
+                }
+            )
+
+        ], style=CONTROL_CONTAINER_STYLE),
+
+        # ---- RESULTS SECTION ----
+        html.Div([
+            html.Hr(style={'borderTop': '1px solid #ddd'}),
+            html.Div(id='evaluation-output')
+        ], style={
+            "backgroundColor": BRAND_COLORS["white"],
+            "padding": "20px",
+            "borderRadius": "8px",
+            "marginTop": "30px"
+        })
+
+    ], style={'marginBottom': '20px'})
+
 
 # ================= ROUTER =================
 @app.callback(Output('page-content','children'), Input('url','pathname'))
@@ -408,26 +765,50 @@ def route(path):
 def update_graph1_main(year_range):
     filtered_data = df1[(df1['year'] >= year_range[0]) & (df1['year'] <= year_range[1])]
 
-    # Create subplot for 'earn' and 'burn'
-    fig = make_subplots(rows=2, cols=1, subplot_titles=('Earn Over Time', 'Burn Over Time'))
+    fig = make_subplots(
+        rows=2,
+        cols=1,
+        subplot_titles=('Earn Over Time', 'Burn Over Time')
+    )
 
-    # Subplot for 'earn'
-    trace_earn = go.Scatter(x=filtered_data['year'], y=filtered_data['earn'], mode='lines+markers', name='Earn')
+    trace_earn = go.Scatter(
+        x=filtered_data['year'],
+        y=filtered_data['earn'],
+        mode='lines+markers',
+        name='Earn'
+    )
     fig.add_trace(trace_earn, row=1, col=1)
 
-    # Subplot for 'burn'
-    trace_burn = go.Scatter(x=filtered_data['year'], y=filtered_data['burn'], mode='lines+markers', name='Burn', line=dict(color='red'))
+    trace_burn = go.Scatter(
+        x=filtered_data['year'],
+        y=filtered_data['burn'],
+        mode='lines+markers',
+        name='Burn',
+        line=dict(color='red')
+    )
     fig.add_trace(trace_burn, row=2, col=1)
 
-    # Update subplot layout
-    fig.update_layout(height=800, showlegend=False)
+    fig.update_layout(
+        showlegend=False,
+        margin=GRAPH_MARGIN,
+        height=700
+    )
 
-    # Update x-axis and y-axis labels
     fig.update_xaxes(title_text='Year', row=2, col=1)
-    fig.update_yaxes(title_text='Miles ', row=1, col=1)
-    fig.update_yaxes(title_text='Miles ', row=2, col=1)
+    fig.update_yaxes(title_text='Miles', row=1, col=1)
+    fig.update_yaxes(title_text='Miles', row=2, col=1)
+
+    # Local subplot title styling
+    for annotation in fig.layout.annotations:
+        annotation.font = dict(
+            family="Book Antiqua, serif",
+            size=20,
+            color=BRAND_COLORS["nexus_blue"]
+        )
+        annotation.text = f"<b>{annotation.text}</b>"
 
     return fig
+
 
 
 # Callback for plot_earn -- graph 2
@@ -456,7 +837,7 @@ def update_graph_earn(year_range, selected_channels):
         xaxis_title='Year',
         yaxis_title='Miles ',
         legend=dict(x=0, y=1, traceorder='normal', orientation='h'),
-        margin=dict(l=0, r=0, t=0, b=0)  # Adjust margins as needed
+        margin=GRAPH_MARGIN  # Adjust margins as needed
     )
 
     return fig
@@ -500,7 +881,7 @@ def update_graph_burn(year_range, selected_channels):
         xaxis_title='Year',
         yaxis_title='Miles',
         legend=dict(x=0, y=1, traceorder='normal', orientation='h'),
-        margin=dict(l=0, r=0, t=0, b=0)  # Adjust margins as needed
+        margin=GRAPH_MARGIN  # Adjust margins as needed
     )
 
     return fig
@@ -533,7 +914,7 @@ def update_graph_earn_monthly(year_range, selected_channels):
         xaxis_title='Year',
         yaxis_title='Miles',
         legend=dict(x=0, y=1, traceorder='normal', orientation='h'),
-        margin=dict(l=0, r=0, t=0, b=0)  # Adjust margins as needed
+        margin=GRAPH_MARGIN  # Adjust margins as needed
     )
 
     return fig
@@ -566,12 +947,12 @@ def update_graph_earn_monthly(year_range, selected_channels):
         xaxis_title='Year',
         yaxis_title='Miles',
         legend=dict(x=0, y=1, traceorder='normal', orientation='h'),
-        margin=dict(l=0, r=0, t=0, b=0)  # Adjust margins as needed
+        margin=GRAPH_MARGIN  # Adjust margins as needed
     )
 
     return fig
 
-    # Callback for graph 4 and 5
+# Callback for graph 4 and 5
 @app.callback(
     Output('earn-burn-histogram', 'figure'),
     [Input('dummy-input', 'n_clicks')]  # Dummy input to trigger the callback
@@ -587,7 +968,7 @@ def update_graph(n_clicks):
     fig.add_trace(go.Bar(x=df4['burn_range'], y=df4['burn_count'], name='Burn'))
 
     # Updating layout
-    fig.update_layout(barmode='group', xaxis_title='Ranges', yaxis_title='Count')
+    fig.update_layout(barmode='group', xaxis_title='Ranges', yaxis_title='Count', margin=GRAPH_MARGIN)
 
     return fig
 
@@ -625,7 +1006,7 @@ def update_graph_age_range_vs_r_rate(pathname):
         xaxis_title='Age Range',
         yaxis_title='Redemption Rate',
         font=dict(size=15),
-        showlegend=False
+        showlegend=False, margin=GRAPH_MARGIN
     )
 
     for i, txt in enumerate(df5['r_rate']):
@@ -663,7 +1044,7 @@ def update_graph_age_range_vs_r_rate_channels(selected_channels):
         xaxis_title='Age Range',
         yaxis_title='Redemption Rate',
         font=dict(size=15),
-        showlegend=True
+        showlegend=True, margin=GRAPH_MARGIN
     )
 
     fig.update_xaxes(tickvals=['0-1', '1-5', '5-10', '10-20', '20-30', '30-40'], ticktext=['0-1', '1-5', '5-10', '10-20', '20-30', '30-40']
@@ -768,24 +1149,24 @@ def logistic_regression_evaluation(df, features, target, threshold=0.5):
     # Prepare classification report for display
     class_report_rows = [
         html.Tr([
-            html.Th("Class"),
-            html.Th("Precision"),
-            html.Th("Recall"),
-            html.Th("F1-Score"),
-            html.Th("Support")
+            html.Th("Class", style={'fontFamily': 'Book Antiqua'}),
+            html.Th("Precision", style={'fontFamily': 'Book Antiqua'}),
+            html.Th("Recall", style={'fontFamily': 'Book Antiqua'}),
+            html.Th("F1-Score", style={'fontFamily': 'Book Antiqua'}),
+            html.Th("Support", style={'fontFamily': 'Book Antiqua'})
         ]),
         html.Tr([
             html.Td("0"),
-            html.Td(f'{class_report["0"]["precision"]:.2f}', style={'color': 'blue'}),
-            html.Td(f'{class_report["0"]["recall"]:.2f}', style={'color': 'blue'}),
-            html.Td(f'{class_report["0"]["f1-score"]:.2f}', style={'color': 'blue'}),
+            html.Td(f'{class_report["0"]["precision"]:.2f}', style={'color': 'blue', 'fontFamily': 'Book Antiqua'}),
+            html.Td(f'{class_report["0"]["recall"]:.2f}', style={'color': 'blue','fontFamily': 'Book Antiqua'}),
+            html.Td(f'{class_report["0"]["f1-score"]:.2f}', style={'color': 'blue','fontFamily': 'Book Antiqua'}),
             html.Td(class_report["0"]["support"])
         ]),
         html.Tr([
             html.Td("1"),
-            html.Td(f'{class_report["1"]["precision"]:.2f}', style={'color': 'blue'}),
-            html.Td(f'{class_report["1"]["recall"]:.2f}', style={'color': 'blue'}),
-            html.Td(f'{class_report["1"]["f1-score"]:.2f}', style={'color': 'blue'}),
+            html.Td(f'{class_report["1"]["precision"]:.2f}', style={'color': 'blue','fontFamily': 'Book Antiqua'}),
+            html.Td(f'{class_report["1"]["recall"]:.2f}', style={'color': 'blue','fontFamily': 'Book Antiqua'}),
+            html.Td(f'{class_report["1"]["f1-score"]:.2f}', style={'color': 'blue','fontFamily': 'Book Antiqua'}),
             html.Td(class_report["1"]["support"])
         ])
     ]
@@ -813,20 +1194,47 @@ def logistic_regression_evaluation(df, features, target, threshold=0.5):
             marker=dict(color='lightgreen')
         )
     ]
-    
+
     # Layout adjustments
     bar_layout = go.Layout(
-    		title=dict(text='Actual vs Predicted Values Count', x=0.5, font=dict(size=20, color='black', family='Arial, sans-serif')),
-    		xaxis=dict(title=dict(text='Dataset', font=dict(size=20, color='black', family='Arial, sans-serif'))),
-    		yaxis=dict(title=dict(text='Count', font=dict(size=20, color='black', family='Arial, sans-serif'))),
-    		legend=dict(font=dict(size=17, family='Arial, sans-serif')),
-    		barmode='group',
-    		bargap=0.2,
-    		bargroupgap=0.1 )
+        title=dict(
+            text='Actual vs Predicted Values Count',
+            x=0.5,
+            font=dict(size=20, color='black', family='Book Antiqua', weight='bold')
+        ),
+        xaxis=dict(
+            title=dict(
+                text='Dataset',
+                font=dict(size=17, color='black', family='Book Antiqua')
+            ),
+            tickfont=dict(
+                size=16,
+                color='black',
+                family='Book Antiqua'
+            )
+        ),
+        yaxis=dict(
+            title=dict(
+                text='Count',
+                font=dict(size=17, color='black', family='Book Antiqua')
+            ),
+            tickfont=dict(
+                size=16,
+                color='black',
+                family='Book Antiqua'
+            )
+        ),
+        legend=dict(
+            font=dict(size=15, family='Book Antiqua')
+        ),
+        barmode='group',
+        bargap=0.2,
+        bargroupgap=0.1
+    )
 
-    
     # Create figure
     bar_fig = go.Figure(data=bar_data, layout=bar_layout)
+
 
     # Return formatted results
     result = html.Div([
@@ -835,10 +1243,10 @@ def logistic_regression_evaluation(df, features, target, threshold=0.5):
             html.B("Training Set Metrics:"),
             html.Br(),
             f'Percentage of correctly predicted instances (both positive and negative) out of all predictions made by the model [Accuracy] : ',
-            html.Span(f'{train_accuracy:.2f}%', style={'color': 'blue'}),
+            html.Span(f'{train_accuracy:.2f}%', style={'color': 'blue', 'fontFamily': 'Book Antiqua'}),
             html.Br(),
             f'Percentage of correctly predicted positive instances out of all positive predictions [Precision] : ',
-            html.Span(f'{train_precision:.2f}%', style={'color': 'blue'}),  # Highlight in blue
+            html.Span(f'{train_precision:.2f}%', style={'color': 'blue', 'fontFamily': 'Book Antiqua'}),  # Highlight in blue
             html.Hr(), 
             html.Br()
         ]),
@@ -846,10 +1254,10 @@ def logistic_regression_evaluation(df, features, target, threshold=0.5):
             html.B("Test Set Metrics:"),
             html.Br(),
             f'Percentage of correctly predicted instances (both positive and negative) out of all predictions made by the model [Accuracy] : ',
-            html.Span(f'{test_accuracy:.2f}%', style={'color': 'green'}),  # Highlight in green
+            html.Span(f'{test_accuracy:.2f}%', style={'color': 'green', 'fontFamily': 'Book Antiqua'}),  # Highlight in green
             html.Br(),
             f'Percentage of correctly predicted positive instances out of all positive predictions [Precision] : ',
-            html.Span(f'{test_precision:.2f}%', style={'color': 'green'}),  # Highlight in green
+            html.Span(f'{test_precision:.2f}%', style={'color': 'green', 'fontFamily': 'Book Antiqua'}),  # Highlight in green
             html.Hr(), 
             html.Br()
         ]),
@@ -857,7 +1265,7 @@ def logistic_regression_evaluation(df, features, target, threshold=0.5):
             html.B("Confusion Matrix:"),
             cm_html,
             html.Br()
-        ]),
+        ],style={"textAlign": "center"}),
         
         html.Hr(), 
         html.Br(),
@@ -870,15 +1278,15 @@ def logistic_regression_evaluation(df, features, target, threshold=0.5):
             class_report_html,  # Display classification report in table format
             html.Hr(), 
             html.Br()
-        ]),
+        ],style={"textAlign": "center"}),
         html.Div([
             html.B("Actual and Predicted Values Count (Training):"),
             html.Br(),
             f'Actual 1 count - The number of instances in the dataset that belong to class 1 : ',
-            html.Span(f'{Y_train.sum()}', style={'color': 'blue'}),
+            html.Span(f'{Y_train.sum()}', style={'color': 'blue', 'fontFamily': 'Book Antiqua'}),
             html.Br(),
             f'Prediction 1 count - The number of instances predicted by the model to belong to class 1 : ',
-            html.Span(f'{y_train_pred.sum()}', style={'color': 'blue'}),
+            html.Span(f'{y_train_pred.sum()}', style={'color': 'blue', 'fontFamily': 'Book Antiqua'}),
             html.Hr(), 
             html.Br()
         ]),
@@ -886,10 +1294,10 @@ def logistic_regression_evaluation(df, features, target, threshold=0.5):
             html.B("Actual and Predicted Values Count (Test):"),
             html.Br(),
             f'Actual 1 count - The number of instances in the dataset that belong to class 1 : ',
-            html.Span(f'{Y_test.sum()}', style={'color': 'green'}),
+            html.Span(f'{Y_test.sum()}', style={'color': 'green', 'fontFamily': 'Book Antiqua'}),
             html.Br(),
             f'Prediction 1 count - The number of instances predicted by the model to belong to class 1 : ',
-            html.Span(f'{y_test_pred.sum()}', style={'color': 'green'}),
+            html.Span(f'{y_test_pred.sum()}', style={'color': 'green', 'fontFamily': 'Book Antiqua'}),
             html.Hr(), 
             html.Br()
         ]),
@@ -897,10 +1305,10 @@ def logistic_regression_evaluation(df, features, target, threshold=0.5):
             html.B("Cross Validation Score for Logistic Regression:"),
             html.Br(),
             f'Percentage of correctly predicted positive instances out of all positive predictions made by the model during cross-validation [Precision CV] : ',
-            html.Span(f'{CVscore.mean() * 100:.2f}% (Mean)', style={'color': 'green'}),
+            html.Span(f'{CVscore.mean() * 100:.2f}% (Mean)', style={'color': 'green', 'fontFamily': 'Book Antiqua'}),
             html.Br(),
             f'Standard deviation during cross-validation of precision measures the variability in positive prediction accuracy across different cross-validation folds : ',
-            html.Span(f' {CVscore.std()}', style={'color': 'green'}),
+            html.Span(f' {CVscore.std()}', style={'color': 'green', 'fontFamily': 'Book Antiqua'}),
             html.Hr(),
             html.Br(),
             
